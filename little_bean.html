@@ -1,0 +1,350 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>小種子長大記</title>
+    <style>
+        /* 統一字體設定 */
+        * {
+            font-family: "Microsoft JhengHei", "Heiti TC", "Apple LiGothic Medium", sans-serif;
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+            background: #e0f7fa;
+            color: #2e7d32;
+        }
+
+        #game-container {
+            width: 100vw;
+            height: 100vh;
+            background: linear-gradient(to bottom, #b3e5fc 0%, #ffffff 70%, #dcedc8 100%);
+            position: relative;
+        }
+
+        /* 左右兩側的植物觀察區 */
+        .plant-habitat {
+            position: absolute;
+            bottom: 20px;
+            width: 150px;
+            height: 200px;
+            display: flex;
+            flex-direction: column;
+            justify-content: flex-end;
+            align-items: center;
+            z-index: 5;
+            background: rgba(255, 255, 255, 0.3);
+            border-radius: 30px;
+            padding-bottom: 10px;
+        }
+        #left-habitat { left: 20px; }
+        #right-habitat { right: 20px; }
+
+        .plant-stage {
+            font-size: 80px;
+            transition: all 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+
+        .habitat-label {
+            font-size: 18px;
+            font-weight: bold;
+            color: #558b2f;
+            margin-top: 5px;
+        }
+
+        /* UI 介面 */
+        #ui-header {
+            position: absolute;
+            top: 20px;
+            width: 100%;
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+            z-index: 100;
+        }
+
+        .glass-panel {
+            background: rgba(255, 255, 255, 0.85);
+            padding: 10px 25px;
+            border-radius: 50px;
+            border: 4px solid #81c784;
+            font-size: 28px;
+            font-weight: 900;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+        }
+
+        /* 螢幕切換 */
+        .screen {
+            position: absolute;
+            inset: 0;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            background: rgba(255, 255, 255, 0.9);
+            z-index: 200;
+            text-align: center;
+            padding: 40px;
+        }
+
+        h1 { font-size: 60px; margin: 0 0 20px 0; color: #388e3c; }
+        .rule-box {
+            background: #fff9c4;
+            padding: 30px;
+            border-radius: 40px;
+            border: 5px dashed #fbc02d;
+            font-size: 26px;
+            line-height: 1.8;
+            margin-bottom: 30px;
+        }
+
+        .btn-main {
+            padding: 20px 60px;
+            font-size: 36px;
+            background: #ff7043;
+            color: white;
+            border: none;
+            border-radius: 100px;
+            cursor: pointer;
+            box-shadow: 0 10px 0 #d84315;
+            transition: 0.2s;
+        }
+        .btn-main:active { transform: translateY(6px); box-shadow: 0 4px 0 #d84315; }
+
+        /* 遊戲元素泡泡 */
+        .bubble {
+            position: absolute;
+            width: 110px;
+            height: 110px;
+            background: white;
+            border-radius: 50%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 55px;
+            cursor: pointer;
+            box-shadow: 0 8px 20px rgba(0,0,0,0.15);
+            animation: bounceIn 0.5s backwards;
+            z-index: 50;
+        }
+
+        @keyframes bounceIn {
+            0% { transform: scale(0); }
+            70% { transform: scale(1.2); }
+            100% { transform: scale(1); }
+        }
+
+        .shake { animation: shake 0.4s ease-in-out; }
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-20px); }
+            75% { transform: translateX(20px); }
+        }
+
+        .score-float {
+            position: absolute;
+            font-size: 45px;
+            font-weight: 900;
+            pointer-events: none;
+            animation: floatUp 0.8s forwards;
+            z-index: 150;
+        }
+        @keyframes floatUp {
+            to { transform: translateY(-100px); opacity: 0; }
+        }
+    </style>
+</head>
+<body>
+
+<div id="game-container">
+    <div id="left-habitat" class="plant-habitat">
+        <div id="plant-l" class="plant-stage">🫘</div>
+        <div class="habitat-label">我的植物</div>
+    </div>
+    <div id="right-habitat" class="plant-habitat">
+        <div id="plant-r" class="plant-stage">🫘</div>
+        <div class="habitat-label">我的植物</div>
+    </div>
+
+    <div id="ui-header" style="display:none;">
+        <div class="glass-panel" id="timer" style="color: #e53935;">⏰ 30</div>
+        <div class="glass-panel" id="score" style="color: #2e7d32;">⭐ 0</div>
+    </div>
+
+    <div id="screen-start" class="screen">
+        <h1>🌱 小種子長大記</h1>
+        <div class="rule-box">
+            點點看：<strong>☀️ 陽光、💧 水分、🤎 泥土</strong><br>
+            幫小種子快快長大！<br>
+            不可以點點：🍩 🧸 💣 喔！
+        </div>
+        <button class="btn-main" onclick="startGame()">開始挑戰</button>
+    </div>
+
+    <div id="screen-end" class="screen" style="display:none;">
+        <h1 id="end-title">好棒喔！</h1>
+        <div id="final-emoji" style="font-size: 150px; margin: 20px;">🌻</div>
+        <div class="glass-panel" id="final-score-text" style="margin-bottom: 30px;">得分: 0</div>
+        <button class="btn-main" onclick="location.reload()">再玩一次</button>
+    </div>
+
+    <div id="play-area" style="width:100%; height:100%;"></div>
+</div>
+
+<script>
+    let score = 0;
+    let timeLeft = 30;
+    let gameActive = false;
+    
+    // 植物成長階段
+    const growthStages = ['🫘', '🌱', '🌿', '🪴', '🌸', '🌻'];
+    
+    const goodOnes = [
+        { icon: '☀️', border: '#fbc02d' },
+        { icon: '💧', border: '#03a9f4' },
+        { icon: '🤎', border: '#795548' }
+    ];
+    
+    const badOnes = ['🍩', '🧸', '💣', '👟', '☁️'];
+
+    // 音效
+    const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    function beep(freq, type, dur = 0.2) {
+        const o = audioCtx.createOscillator();
+        const g = audioCtx.createGain();
+        o.type = type;
+        o.frequency.value = freq;
+        g.gain.exponentialRampToValueAtTime(0.00001, audioCtx.currentTime + dur);
+        o.connect(g); g.connect(audioCtx.destination);
+        o.start(); o.stop(audioCtx.currentTime + dur);
+    }
+
+    function startGame() {
+        document.getElementById('screen-start').style.display = 'none';
+        document.getElementById('ui-header').style.display = 'flex';
+        gameActive = true;
+
+        // 倒數計時
+        const timerInt = setInterval(() => {
+            timeLeft--;
+            document.getElementById('timer').innerText = `⏰ ${timeLeft}`;
+            if (timeLeft <= 0) {
+                clearInterval(timerInt);
+                endGame();
+            }
+        }, 1000);
+
+        // 每2秒必出正確項
+        setInterval(() => { if(gameActive) spawn(true); }, 2000);
+        
+        // 額外隨機項
+        const randomSpawning = () => {
+            if(!gameActive) return;
+            spawn(Math.random() > 0.5);
+            setTimeout(randomSpawning, 700 + Math.random() * 800);
+        };
+        randomSpawning();
+    }
+
+    function spawn(isGood) {
+        const playArea = document.getElementById('play-area');
+        const bubble = document.createElement('div');
+        bubble.className = 'bubble';
+        
+        let info;
+        if(isGood) {
+            info = goodOnes[Math.floor(Math.random() * goodOnes.length)];
+            bubble.innerText = info.icon;
+            bubble.style.border = `8px solid ${info.border}`;
+        } else {
+            bubble.innerText = badOnes[Math.floor(Math.random() * badOnes.length)];
+            bubble.style.border = `8px solid #cfd8dc`;
+        }
+
+        // 隨機位置 (避開兩側植物和上方UI)
+        const x = Math.random() * (window.innerWidth - 300) + 150;
+        const y = Math.random() * (window.innerHeight - 250) + 120;
+        bubble.style.left = `${x}px`;
+        bubble.style.top = `${y}px`;
+
+        bubble.onclick = (e) => {
+            if(!gameActive) return;
+            handleTouch(isGood, bubble, e.pageX, e.pageY);
+        };
+
+        playArea.appendChild(bubble);
+        setTimeout(() => { if(bubble.parentNode) bubble.remove(); }, 2500);
+    }
+
+    function handleTouch(isGood, el, x, y) {
+        if(isGood) {
+            score += 10;
+            beep(523, 'sine'); // Do
+            setTimeout(() => beep(659, 'sine'), 100); // Mi
+            popText("+10", x, y, "#4caf50");
+            updatePlants();
+            el.style.transform = "scale(1.5)";
+            el.style.opacity = "0";
+        } else {
+            score = Math.max(0, score - 5);
+            beep(150, 'square', 0.4); 
+            popText("-5", x, y, "#f44336");
+            el.classList.add('shake');
+        }
+        document.getElementById('score').innerText = `⭐ ${score}`;
+        setTimeout(() => { if(el.parentNode) el.remove(); }, 300);
+    }
+
+    function updatePlants() {
+        // 每 30 分升級一階，最高第 5 階 (🌻)
+        let stage = Math.min(Math.floor(score / 30), 5);
+        const icon = growthStages[stage];
+        document.getElementById('plant-l').innerText = icon;
+        document.getElementById('plant-r').innerText = icon;
+        
+        // 成長動畫
+        const animate = (id) => {
+            const p = document.getElementById(id);
+            p.style.transform = "scale(1.3)";
+            setTimeout(() => p.style.transform = "scale(1)", 200);
+        };
+        animate('plant-l'); animate('plant-r');
+    }
+
+    function popText(txt, x, y, color) {
+        const t = document.createElement('div');
+        t.className = 'score-float';
+        t.innerText = txt;
+        t.style.left = x + 'px'; t.style.top = y + 'px';
+        t.style.color = color;
+        document.body.appendChild(t);
+        setTimeout(() => t.remove(), 800);
+    }
+
+    function endGame() {
+        gameActive = false;
+        document.getElementById('ui-header').style.display = 'none';
+        document.getElementById('play-area').innerHTML = '';
+        document.getElementById('screen-end').style.display = 'flex';
+        document.getElementById('final-score-text').innerText = `總分: ${score}`;
+        
+        const finalEmoji = document.getElementById('final-emoji');
+        if(score >= 150) {
+            finalEmoji.innerText = '🌻';
+            document.getElementById('end-title').innerText = '超級綠手指！';
+        } else if(score >= 60) {
+            finalEmoji.innerText = '🪴';
+            document.getElementById('end-title').innerText = '種子長大啦！';
+        } else {
+            finalEmoji.innerText = '🌱';
+            document.getElementById('end-title').innerText = '再加油一點點！';
+        }
+    }
+</script>
+
+</body>
+</html>
